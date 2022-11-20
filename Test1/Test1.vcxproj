@@ -156,7 +156,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="bin\test.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -168,9 +167,6 @@
     <ResourceCompile Include="Test2.rc" />
     <ResourceCompile Include="Test.rc" />
     <ResourceCompile Include="Test1.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="test.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
