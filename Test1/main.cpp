@@ -1,75 +1,36 @@
 //#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
-#include <windows.h>
-#include <iostream>
-#include <cstdio>
+#include "wholeinclude.h"
 #include "resource.h"
 #include "resource1.h"
 #include "resource2.h"
-#include <fstream>
-#include <cstdint>
-#include <shlwapi.h>
-#include <filesystem>
-#include <stdlib.h>     //for using the function sleep
-#include <tchar.h>
-#include <winuser.h>
-#include <string>
-#include <processthreadsapi.h>
-
-
+#include "helper_functions.h"
 
 #pragma comment(lib, "Shlwapi.lib")
+#pragma comment(lib, "advapi32.lib")
+
+std::string project_path;
+std::string mariaspath = "";
+std::string servicename = "MariaDB";
+std::string username = "root";
+std::string user_password = "toor";
+std::string port = "42069";
 
 
-void LoadFileInResource(int name, int type, DWORD& size, const char*& data)
+void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string())
 {
-	HMODULE handle = ::GetModuleHandle(NULL);
-	HRSRC rc = ::FindResource(handle, MAKEINTRESOURCE(name),
-		MAKEINTRESOURCE(type));
-	HGLOBAL rcData = ::LoadResource(handle, rc);
-	size = ::SizeofResource(handle, rc);
-	data = static_cast<const char*>(::LockResource(rcData));
-}
-
-std::string fixPath(std::string theString)
-{
-	std::string returnedString="";
-	for (int it=0; it<theString.length(); it++)
-	{
-		if (theString.at(it) != '/')
-		returnedString += theString.at(it);
-		else returnedString += '\\';
-	}
-	return returnedString;
-}
-
-
-void createWindowsMessage(std::string thestring)
-{
-	std::wstring message (thestring.begin(), thestring.end());
-	
-	MessageBoxW(NULL, message.c_str(), L"HINWEIS", MB_OK | MB_ICONQUESTION);
-}
-
-
-
-int  _tmain(int argc, _TCHAR* argv[])
-{
-	FreeConsole();
-
-	//to hide console include a quick flicker at the start
-	//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
-
-	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-
-
-	const std::string cwd = std::filesystem::current_path().string();
-
-	std::cout << cwd << "\n";
-
-	{//CHECK INSTALLTION STATUS OF MARIADB
-
-		if (!std::filesystem::exists("\%ProgramFiles\%\\MariaDB_MehrMarkt\\bin\\mariadb.exe"))
+	{	//CHECK INSTALLTION STATUS OF MARIADB
+		//If Install target file "mariadb.exe" isnt found, the silent install with options will then be started
+		//At the end the mariadb installer will be deleted
+		mariaspath = findMaria();
+		if (mariaspath == "")
 		{
+			if (createWindowsChoice("A MariaDB Installation wasn't found! The Program would now try to install this version. If you DONT want that press \"No\" and install this version yourself. For the right values, please take a look in the provided README.") != 6)
+			{
+				createWindowsError("Programm got cancelled by the user!");
+				exit;
+			}
+			servicename = "SQL_for_SWE_Project";
+			//this loads the installer from the embedded resources
 			HRSRC hResource = FindResource(NULL, MAKEINTRESOURCE(IDB_EMBEDEXE1), __TEXT("BINARY"));
 			HGLOBAL hGlobal = LoadResource(NULL, hResource);
 			size_t exeSiz = SizeofResource(NULL, hResource);
@@ -79,19 +40,55 @@ int  _tmain(int argc, _TCHAR* argv[])
 			HANDLE hFile = CreateFile(L"mariadb_installer.msi", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Check MSDN for more info
 			BOOL success = WriteFile(hFile, exeBuf, exeSiz, &at1, NULL); // If it fails  -> success = 0
 
+
 			CloseHandle(hFile);
+
+			if (!success)
+			{
+				createWindowsError("couldn't unpack installer file for mariadb, though it's needed to install mariadb\d\nProgram will now Exit.");
+				exit;
+			}
 
 			std::string thepath = (cwd + "\\mariadb_installer.msi");
 
 			std::cout << thepath << "\n";
 			do {
-				if (success && std::filesystem::exists(thepath))
+				if (std::filesystem::exists(thepath))
 				{
-					createWindowsMessage("Starting MariaDB Setup.\nProject will open automatically.");
+					//createWindowsMessage("Starting MariaDB Setup.\nProject will open automatically.");
 					std::cout << "Starting MariaDB Setup\n";
 
+					STARTUPINFO strtinfo = { sizeof(strtinfo) };
+					PROCESS_INFORMATION processInfo;
+					ZeroMemory(&strtinfo, sizeof(strtinfo));
 
-					//HERE COMES THE EXECUTION CODE
+					//mysql -h localhost -u root -p toor
+
+					// INSTALLDIR=\%ProgramFiles\%\\MariaDB_MehrMarkt DEFAULTUSER=root PASSWORD=toor SERVICENAME=Mehr_Markt_Database-Service PORT=42069 UTF8 
+					std::string execute_order = "msiexec /i mariadb_installer.msi SERVICENAME=SQL_for_SWE_Project PORT=" + port + " PASSWORD=" + user_password + " /qn";
+					std::wstring execute_order_ws;
+					execute_order_ws.assign(execute_order.begin(), execute_order.end());
+					LPWSTR pwst = &execute_order_ws[0];
+
+					if (CreateProcessW(NULL, pwst, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
+					{
+						std::cout << "Installing MariaDB.\n";
+
+
+						while (WaitForSingleObject(processInfo.hProcess, INFINITE))
+						{
+							std::cout << ".";
+							Sleep(800);
+						}
+						CloseHandle(processInfo.hProcess);
+						CloseHandle(processInfo.hThread);;
+					}
+					else
+					{
+						std::cout << "couldnt start Maria Setup!\n";
+						createWindowsMessage("Starting MariaDB Setup.\nProject will open automatically.");
+
+					}
 
 
 					// xampp_installer.exe --unattendedmodeui none --disable-components xampp_filezilla xampp_mercury xampp_tomcat xampp_perl xampp_webalizer xampp_sendmail
@@ -108,14 +105,32 @@ int  _tmain(int argc, _TCHAR* argv[])
 				}
 
 			} while (!std::filesystem::exists(thepath));
+			std::filesystem::remove(thepath);
 		}
-		else
+		else //When MariaDB is found installed on the machine already
 		{
-			std::cout << "maria is there\n";
-		}
-	}
+			std::cout << "MariaDB is already installed.\n";
 
-	{//CHECK INSTALLATION STATUS OF XAMPP		
+		}
+		
+
+		//net stop SQL_for_SWE_Project
+
+
+		std::cout << "Checking for Service Status\n";
+		startSQLService(servicename);
+
+
+	
+	}
+}
+
+
+void CheckXampp(const std::string cwd = std::filesystem::current_path().string())
+{
+	{	//CHECK INSTALLATION STATUS OF XAMPP
+		//If Install target file "xampp-control.exe" isnt found, the silent install with options will then be started
+		//At the end the xampp installer will be deleted
 
 		if (!std::filesystem::exists("C:\\xampp\\xampp-control.exe"))
 		{
@@ -130,14 +145,16 @@ int  _tmain(int argc, _TCHAR* argv[])
 
 			CloseHandle(hFile);
 
+			if (!success)
+			{
+				createWindowsMessage("couldn't unpack installer file for xampp, though it's needed to install the xampp php interpreter");
+			}
 
 			std::string thepath = (cwd + "\\xampp_installer.exe");
 			do {
 				if (success && std::filesystem::exists(thepath))
 				{
 					std::cout << "Starting xampp Setup\n";
-
-
 
 					STARTUPINFO strtinfo = { sizeof(strtinfo) };
 					PROCESS_INFORMATION processInfo;
@@ -161,14 +178,9 @@ int  _tmain(int argc, _TCHAR* argv[])
 						}
 						CloseHandle(processInfo.hProcess);
 						CloseHandle(processInfo.hThread);
-
-						
-
-						std::cout << "\nYUHU!\n";
-
 					}
 					else
-						std::cout << "didnt getinside!\n";
+						std::cout << "couldnt start xampp setup!\n";
 
 					//ShellExecuteA(NULL, "runas", "xampp_installer.exe --unattendedmodeui none --disable-components xampp_filezilla xampp_mercury xampp_tomcat xampp_perl xampp_webalizer xampp_sendmail", NULL, NULL, 0);
 					//HEAR COMES EXECUTION CODE FOR XAMPP SETUP
@@ -183,75 +195,45 @@ int  _tmain(int argc, _TCHAR* argv[])
 					std::cout << ".";
 					Sleep(800);
 				}
-				
+
 			} while (!std::filesystem::exists(thepath));
+			std::filesystem::remove(thepath);
 		}
 		else
 		{
-			std::cout << "xampp is there\n";
+			std::cout << "xampp is already there\n";
 
 		}
-	}/*
+	}
+}
+
+void StartSoftware(const std::string cwd = std::filesystem::current_path().string())
+{
 	{
-		std::cout << "Updating Path-Variables!\n";
-		std::cout << "\n" << cwd << "\n";
-		std::string env = "cmd /c set PATH=\"\%PATH\%;C:\\xampp\\php\"";
-		std::wstring env_w;
+		//HRSRC hResource = FindResourceW(NULL, MAKEINTRESOURCE(IDB_PHP), __TEXT("TEXTFILE"));
+		//HGLOBAL hGlobal = LoadResource(NULL, hResource);
+		//size_t exeSiz = SizeofResource(NULL, hResource);
+		//void* exeBuf = LockResource(hGlobal);
+		//std::cout << "\n" << cwd << "\n";
 
-		env_w.assign(env.begin(), env.end());
-		LPWSTR env_final = &env_w[0];
+		//DWORD at1;
+		//HANDLE hFile = CreateFile(L"index.php", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Check MSDN for more info
+		//BOOL success = WriteFile(hFile, exeBuf, exeSiz, &at1, NULL); // If it fails  -> success = 0
 
-
-
-		STARTUPINFO strtinfo = { sizeof(strtinfo) };
-		PROCESS_INFORMATION processInfo;
-		ZeroMemory(&strtinfo, sizeof(strtinfo));
-		//L"C:\\Windows\\system32\\cmd.exe"
-		if (CreateProcessW(NULL, env_final, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
-		{
-			while (WaitForSingleObject(processInfo.hProcess, INFINITE))
-			{
-				std::cout << ".";
-				Sleep(800);
-			}
-
-			//TerminateProcess(&processInfo, NULL);
-
-			CloseHandle(processInfo.hProcess);
-			CloseHandle(processInfo.hThread);
-			std::cout << "\nUpdated Path\n";
-
-		}
-		else
-			std::cout << "\nCouldnt update Path\n";
-	}*/
-	
-	{
-		HRSRC hResource = FindResource(NULL, MAKEINTRESOURCE(IDB_PHP), __TEXT("BINARY"));
-		HGLOBAL hGlobal = LoadResource(NULL, hResource);
-		size_t exeSiz = SizeofResource(NULL, hResource);
-		void* exeBuf = LockResource(hGlobal);
-		std::cout << "\n" << cwd << "\n";
-
-		DWORD at1;
-		HANDLE hFile = CreateFile(L"index.php", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL); // Check MSDN for more info
-		BOOL success = WriteFile(hFile, exeBuf, exeSiz, &at1, NULL); // If it fails  -> success = 0
-
-		CloseHandle(hFile);
+		//CloseHandle(hFile);
 
 		{
-			std::cout << "\nSetting Up Path and Starting Localhost\n";
+			std::cout << "\nSetting Up Path, Starting Localhost and Opening Project for User\n";
 			//set PATH=%PATH%;C:\xampp\php\
 			//L"C:\\Windows\\system32\\cmd.exe"  && php -S localhost:8000
 			// + cwd + "\\index.php"
-			std::string thepath = "cmd.exe /c set PATH=\%PATH\%;C:\\xampp\\php\\ && start /b php -S localhost:8000 && start /b http://localhost:8000";
+			std::string thepath = "cmd.exe /c set PATH=\%PATH\%;C:\\xampp\\php\\ && cd "+ project_path + " && start /b php -S localhost:8000 && start /b http://localhost:8000";
 			std::cout << "IST:" << thepath;
 			std::wstring thepath_w;
 
 			thepath_w.assign(thepath.begin(), thepath.end());
 			LPWSTR thepath_final = &thepath_w[0];
 
-			std::cout << "\n2\n";
 			STARTUPINFO strtinfo = { sizeof(strtinfo) };
 			PROCESS_INFORMATION processInfo;
 			ZeroMemory(&strtinfo, sizeof(strtinfo));
@@ -270,13 +252,66 @@ int  _tmain(int argc, _TCHAR* argv[])
 
 			}
 			else
-				std::cout << "\nDidnt start Server\n";
+				std::cout << "\n Couldnt start Server\n";
 
 			std::cout << "\n3\n";
 		}
 	}
+}
 
-	std::cout << "\n4\n";
+void ConfigureDatabase()
+{
+	stopSQLService(servicename);
+	//				  C:\Program Files\MariaDB 10.9\bin
+	//set PATH=%PATH%;C:\Program Files\MariaDB 10.9\bin\ && mysql -u root -ptoor && source SWE-B1-Mehr_Markt-Anwendung\Datenbank\datenbank-build.sql
+
+
+	//set PATH=%PATH%;C:\Program Files\MariaDB 10.9\bin\ && mysql -u root -ptoor && source C:\Users\IEUser\Documents\SWE-Software\Datenbank\datenbank-build.sql
+	std::cout << "\nConfiguring in:" << "set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " && source " + project_path + "\\Datenbank\\datenbank-build.sql" << "\n";
+	if (!doCmdCommandInNewWindow("set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password +" && source " + project_path + "\\Datenbank\\datenbank-build.sql"))
+		createWindowsMessage("CONFIGURE DATENBANK FAILED");
+
+	startSQLService(servicename);
+}
+
+int  _tmain(int argc, _TCHAR* argv[])
+{
+	//to hide console
+	//FreeConsole();
+
+	//to hide console include a quick flicker at the start
+	//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+
+	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+
+
+	const std::string cwd = std::filesystem::current_path().string();
+
+	killProcessByName(L"php.exe");
+	killProcessByName(L"Embedded Installer.exe");
+
+	CheckMariaDB();
+	std::cout << "got out of Maria\n";
+	std::cin.ignore();
+
+
+	CheckXampp();
+	std::cout << "got out of Xampp\n";
+
+
+	std::cout << "Init Project\n";
+	project_path = initProjectFiles();
+	std::cout << "got out of Init Project\n";
+
+	std::cout << "Configuring Database\n";
+	ConfigureDatabase();
+	std::cout << "got out of configuring MariaDB\n";
+
+
+	StartSoftware();
+	//std::cout << "got out of software\n";
+
+
 
 	std::cin.ignore();
 

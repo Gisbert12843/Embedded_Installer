@@ -2,8 +2,15 @@
 // Microsoft Visual C++ generated include file.
 // Used by Test1.rc
 
+
 #define IDB_EMBEDEXE1 13232 // Or whatever suitable value you need
 
+//from resource 1
+#define IDB_EMBEDEXE2 13233
+
+
+//from resource 2
+#define IDB_PHP 13234
 
 //#define IDR_MYTEXTFILE1                 101
 //#define TEXTFILE1                       256

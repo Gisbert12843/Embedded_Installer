@@ -2,8 +2,9 @@
 // Microsoft Visual C++ generated include file.
 // Used by Test2.rc
 
+//
 
-#define IDB_EMBEDEXE2 13233
+
 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
