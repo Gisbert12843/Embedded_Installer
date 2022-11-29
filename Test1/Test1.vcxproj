@@ -116,6 +116,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -153,15 +154,26 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="inputbox\InputBox\SG_InputBox.cpp" />
+    <ClCompile Include="inputbox\InputBox\stdafx.cpp" />
+    <ClCompile Include="inputbox\InputBox\utils.cpp" />
+    <ClCompile Include="inputbox\TestInputBox\pch.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="oldcode.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="corrections.h" />
     <ClInclude Include="helper_functions.h" />
+    <ClInclude Include="inputbox\InputBox\SG_InputBox.h" />
+    <ClInclude Include="inputbox\InputBox\stdafx.h" />
+    <ClInclude Include="inputbox\InputBox\targetver.h" />
+    <ClInclude Include="inputbox\InputBox\utils.h" />
+    <ClInclude Include="inputbox\TestInputBox\pch.h" />
+    <ClInclude Include="inputbox\TestInputBox\SG_InputBoxLib.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="wholeinclude.h" />
   </ItemGroup>

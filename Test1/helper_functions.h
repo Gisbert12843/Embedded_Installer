@@ -24,7 +24,7 @@ bool doCmdCommand(std::string thepath, std::string running_exe = "")
 		theexe_w.append(running_exe.begin(), running_exe.end());
 		LPWSTR theexe_final = &theexe_w[0];
 		if (running_exe == "")
-			theexe_final == NULL;
+			theexe_final = NULL;
 
 		STARTUPINFO strtinfo = { sizeof(strtinfo) };
 		PROCESS_INFORMATION processInfo;
@@ -33,6 +33,7 @@ bool doCmdCommand(std::string thepath, std::string running_exe = "")
 
 		if (CreateProcess(theexe_final, thepath_final, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
 		{
+			::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 			while (WaitForSingleObject(processInfo.hProcess, INFINITE))
 			{
 				std::cout << ".";
@@ -60,20 +61,22 @@ bool doCmdCommandInNewWindow(std::string command, std::string running_exe = "")
 		theexe_w.append(running_exe.begin(), running_exe.end());
 		LPWSTR theexe_final = &theexe_w[0];
 		if (running_exe == "")
-			theexe_final == NULL;
+			theexe_final = NULL;
 
 		STARTUPINFO strtinfo = { sizeof(strtinfo) };
 		PROCESS_INFORMATION processInfo;
 		ZeroMemory(&strtinfo, sizeof(strtinfo));
 
 		//CREATE_NO_WINDOW |
-		if (CreateProcess(theexe_final,thepath_final, NULL, NULL, FALSE,  NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP, NULL, NULL, &strtinfo, &processInfo))
+		if (CreateProcess(theexe_final, thepath_final, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP, NULL, NULL, &strtinfo, &processInfo))
 		{
-			//while (WaitForSingleObject(processInfo.hProcess, INFINITE))
-			//{
-			//	std::cout << ".";
-			//	Sleep(800);
-			//}
+			::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+			while (WaitForSingleObject(processInfo.hProcess, INFINITE)) //we maybe do not want to wait here since we detached the process.. needs some experiments
+			{
+				std::cout << ".";
+				Sleep(800);
+			}
+			
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 
@@ -91,7 +94,7 @@ void killProcessByName(const wchar_t* filename)
 	BOOL hRes = Process32First(hSnapShot, &pEntry);
 	while (hRes)
 	{
-		
+
 		if (lstrcmpW(pEntry.szExeFile, filename) == 0)
 		{
 			HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, 0,
@@ -188,6 +191,7 @@ int createWindowsMessage(std::string thestring)
 	return MessageBoxW(NULL, message.c_str(), L"!!HINWEIS!!", MB_OK | MB_ICONQUESTION);
 }
 
+//return: yes==6 no==7 cancel==2 abort==3
 int createWindowsChoice(std::string thestring)
 {
 	std::wstring message(thestring.begin(), thestring.end());
@@ -199,7 +203,7 @@ int createWindowsError(std::string thestring)
 {
 	std::wstring message(thestring.begin(), thestring.end());
 
-	return MessageBoxW(NULL, message.c_str(), L"ERROR", MB_RETRYCANCEL | MB_ICONERROR );
+	return MessageBoxW(NULL, message.c_str(), L"ERROR", MB_RETRYCANCEL | MB_ICONERROR);
 }
 
 void killProgrammMessage()
@@ -213,7 +217,7 @@ void killProgrammMessage()
 
 void startSQLService(std::string servicename)
 {
-	const char* x ;
+	const char* x;
 	std::string y = "net start ";
 	y.append(servicename);
 	x = (y.c_str());
@@ -235,15 +239,15 @@ std::string initProjectFiles()
 
 
 
-	 CHAR my_documents[MAX_PATH];
-	 HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
+	CHAR my_documents[MAX_PATH];
+	HRESULT result = SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, SHGFP_TYPE_CURRENT, my_documents);
 
 
 
-	 if (std::filesystem::exists(std::string(my_documents) + "\\SWE-Software"))
-	 {
-		 return (std::string(my_documents) + "\\SWE-Software");
-	 }
+	if (std::filesystem::exists(std::string(my_documents) + "\\SWE-Software"))
+	{
+		return (std::string(my_documents) + "\\SWE-Software");
+	}
 
 	HRSRC hResource = FindResource(NULL, MAKEINTRESOURCE(IDB_PHP), __TEXT("BINARY"));
 	HGLOBAL hGlobal = LoadResource(NULL, hResource);
@@ -294,24 +298,35 @@ std::string findMaria()
 	auto end_iter = std::filesystem::end(iter);
 	auto ec = std::error_code();
 	std::filesystem::directory_entry dirEntry;
-	for (; iter != end_iter; iter.increment(ec))
+	try {
+		for (; iter != end_iter; iter.increment(ec))
+		{
+			if (ec)
+			{
+				std::cout << "\n" << ec << "\n";
+				continue;
+			}
+			else if (!iter->is_regular_file() || iter->is_symlink())
+			{
+				continue;
+			}
+			dirEntry = std::filesystem::directory_entry(iter->path());
+			//std::cout << "searching in" << dirEntry.path() << "\n";
+
+
+
+			if (dirEntry.path().filename() == L"mariadb.exe")
+			{
+				std::cout << "Found Maria in:" + dirEntry.path().parent_path().string() << "\n";
+				return dirEntry.path().parent_path().string();
+			}
+
+
+		}
+	}
+	catch (std::filesystem::filesystem_error error_ec)
 	{
-		if (ec)
-		{
-			continue;
-		}
-		dirEntry = std::filesystem::directory_entry(iter->path());
-		//std::cout << "searching in" << dirEntry.path() << "\n";
-	
-
-
-		if (dirEntry.path().filename() == L"mariadb.exe")
-		{
-			std::cout << "Found Maria in:" + dirEntry.path().parent_path().string() << "\n";
-			return dirEntry.path().parent_path().string();
-		}
-
-
+		createWindowsError(ec.message());
 	}
 	return "";
 }

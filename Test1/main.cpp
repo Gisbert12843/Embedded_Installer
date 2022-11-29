@@ -14,6 +14,8 @@ std::string servicename = "MariaDB";
 std::string username = "root";
 std::string user_password = "toor";
 std::string port = "42069";
+bool config_did_work = true;
+bool choose_new_install = false;
 
 
 void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string())
@@ -22,11 +24,11 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 		//If Install target file "mariadb.exe" isnt found, the silent install with options will then be started
 		//At the end the mariadb installer will be deleted
 		mariaspath = findMaria();
-		if (mariaspath == "")
+		//createWindowsMessage("got out of find maria");
+		if (choose_new_install || mariaspath == "")
 		{
-			if (createWindowsChoice("A MariaDB Installation wasn't found! The Program would now try to install this version. If you DONT want that press \"No\" and install this version yourself. For the right values, please take a look in the provided README.") != 6)
+			if (6 != createWindowsChoice("A MariaDB Installation wasn't found! The Program would now try to install this version. If you DONT want that press \"No\" and install this version yourself. For the right values, please take a look in the provided README."))
 			{
-				createWindowsError("Programm got cancelled by the user!");
 				exit;
 			}
 			servicename = "SQL_for_SWE_Project";
@@ -51,7 +53,7 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 
 			std::string thepath = (cwd + "\\mariadb_installer.msi");
 
-			std::cout << thepath << "\n";
+			//std::cout << thepath << "\n";
 			do {
 				if (std::filesystem::exists(thepath))
 				{
@@ -65,7 +67,7 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 					//mysql -h localhost -u root -p toor
 
 					// INSTALLDIR=\%ProgramFiles\%\\MariaDB_MehrMarkt DEFAULTUSER=root PASSWORD=toor SERVICENAME=Mehr_Markt_Database-Service PORT=42069 UTF8 
-					std::string execute_order = "msiexec /i mariadb_installer.msi SERVICENAME=SQL_for_SWE_Project PORT=" + port + " PASSWORD=" + user_password + " /qn";
+					std::string execute_order = "msiexec /i mariadb_installer.msi INSTALLDIR=\%ProgramFiles\%\\MariaDB_MehrMarkt SERVICENAME=SQL_for_SWE_Project PORT=" + port + " PASSWORD=" + user_password + "UTF8 /qn";
 					std::wstring execute_order_ws;
 					execute_order_ws.assign(execute_order.begin(), execute_order.end());
 					LPWSTR pwst = &execute_order_ws[0];
@@ -73,7 +75,7 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 					if (CreateProcessW(NULL, pwst, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
 					{
 						std::cout << "Installing MariaDB.\n";
-
+						createWindowsMessage("Starting MariaDB Setup. Please be patient. This will take a few minutes. \nProject will open automatically.");
 
 						while (WaitForSingleObject(processInfo.hProcess, INFINITE))
 						{
@@ -85,9 +87,9 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 					}
 					else
 					{
-						std::cout << "couldnt start Maria Setup!\n";
-						createWindowsMessage("Starting MariaDB Setup.\nProject will open automatically.");
-
+						//std::cout << "couldnt start Maria Setup!\n";
+						createWindowsMessage("Couldn't start MariaDB-Setup, though its needed for the Software to run! Try starting the Software from a different location. Programm will exit now.");
+						exit;
 					}
 
 
@@ -109,15 +111,35 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 		}
 		else //When MariaDB is found installed on the machine already
 		{
-			std::cout << "MariaDB is already installed.\n";
-
+			//std::cout << "MariaDB is already installed.\n";
+			if (mariaspath != "" && !config_did_work)
+			{
+				if (6 != createWindowsChoice("We found a version of MariaDB installed. Do you want to enter the Credentials (Username, Password, Port) for this instance? Or should we install our own version? !!! WARNING !!!: It will override the version 10.10!!!"))
+				{
+					choose_new_install = true;
+					CheckMariaDB();
+					return;
+				}
+				do {
+					username = "";
+					user_password = "";
+					std::wstring wString_username;
+					wString_username = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"We found an existing version of MariaDB. In order to use this Software we require the Username, the Password and the Port of your DB. Please enter your MariaDB Username.", L"root");
+					username = std::string(wString_username.begin(), wString_username.end());
+					std::wstring wString_password;
+					wString_password = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Password.", L"root");
+					user_password = std::string(wString_password.begin(), wString_password.end());
+					std::wstring wString_port;
+					wString_port = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Port.", L"root");
+					port = std::string(wString_port.begin(), wString_port.end());
+				} while (username == "" && user_password == "" || 6 != createWindowsChoice("Username:" + username + "\nPassword:" + user_password + "\nPort:" + port + "\nIs that correct?"));
+			
+			}
 		}
 		
 
-		//net stop SQL_for_SWE_Project
 
 
-		std::cout << "Checking for Service Status\n";
 		startSQLService(servicename);
 
 
@@ -155,6 +177,7 @@ void CheckXampp(const std::string cwd = std::filesystem::current_path().string()
 				if (success && std::filesystem::exists(thepath))
 				{
 					std::cout << "Starting xampp Setup\n";
+					createWindowsMessage("Starting XAMPP Setup. Please be patient. This will take a few minutes. \nProject will open automatically.");
 
 					STARTUPINFO strtinfo = { sizeof(strtinfo) };
 					PROCESS_INFORMATION processInfo;
@@ -168,7 +191,6 @@ void CheckXampp(const std::string cwd = std::filesystem::current_path().string()
 
 					if (CreateProcessW(NULL, pwst, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
 					{
-						std::cout << "gotinside!\n";
 						std::cout << "Waiting for XAMPP Setup to finnish.\n";
 
 						while (WaitForSingleObject(processInfo.hProcess, INFINITE))
@@ -228,7 +250,7 @@ void StartSoftware(const std::string cwd = std::filesystem::current_path().strin
 			//L"C:\\Windows\\system32\\cmd.exe"  && php -S localhost:8000
 			// + cwd + "\\index.php"
 			std::string thepath = "cmd.exe /c set PATH=\%PATH\%;C:\\xampp\\php\\ && cd "+ project_path + " && start /b php -S localhost:8000 && start /b http://localhost:8000";
-			std::cout << "IST:" << thepath;
+			//std::cout << "IST:" << thepath;
 			std::wstring thepath_w;
 
 			thepath_w.assign(thepath.begin(), thepath.end());
@@ -253,64 +275,81 @@ void StartSoftware(const std::string cwd = std::filesystem::current_path().strin
 			}
 			else
 				std::cout << "\n Couldnt start Server\n";
-
-			std::cout << "\n3\n";
 		}
 	}
 }
 
 void ConfigureDatabase()
 {
-	stopSQLService(servicename);
-	//				  C:\Program Files\MariaDB 10.9\bin
-	//set PATH=%PATH%;C:\Program Files\MariaDB 10.9\bin\ && mysql -u root -ptoor && source SWE-B1-Mehr_Markt-Anwendung\Datenbank\datenbank-build.sql
-
-
-	//set PATH=%PATH%;C:\Program Files\MariaDB 10.9\bin\ && mysql -u root -ptoor && source C:\Users\IEUser\Documents\SWE-Software\Datenbank\datenbank-build.sql
-	std::cout << "\nConfiguring in:" << "set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " && source " + project_path + "\\Datenbank\\datenbank-build.sql" << "\n";
-	if (!doCmdCommandInNewWindow("set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password +" && source " + project_path + "\\Datenbank\\datenbank-build.sql"))
-		createWindowsMessage("CONFIGURE DATENBANK FAILED");
-
 	startSQLService(servicename);
+	
+	//									 mysql -u root -ptoor -e "source C:\Users\IEUser\Documents\SWE-Software\Datenbank\datenbank-build.sql"
+
+	/*std::cout << "\n\n" <<		 "cmd /c set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " -e \"source " + project_path + "\\Datenbank\\datenbank-build.sql\" -q" << "\n\n";
+	std::cin.ignore();*/
+							//    cmd /c set PATH=%PATH%;C:\Program Files\MariaDB 10.10\bin\ && mysql -u root -ptoor -e "source C:\Users\IEUser\Documents\SWE-Software\Datenbank\datenbank-build.sql" -q
+
+	//if (!doCmdCommand("cmd /c set PATH=\%PATH\%;" + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " -e \"source " + project_path + "\\Datenbank\\datenbank-build.sql\" -q"))
+	//{
+	//	createWindowsMessage("´CONFIGURE DATENBANK FAILED");
+	//	config_did_work = false;
+	//	CheckMariaDB();
+	//	ConfigureDatabase();
+	//}
+
+	std::string x = "cmd /c cd " + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " -e \"source " + project_path + "\\Datenbank\\datenbank-build.sql\" -q";
+	std::string y = "cmd /c cd " + mariaspath + "\\ && mysql -u " + username + " -p" + user_password + " -e \"source " + project_path + "\\Datenbank\\datenbank-testdata.sql\" -q";
+	const HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+	//std::cout << "\n\n" << x << "\n\n";
+	//std::cout << "\n\n" << y << "\n\n";
+
+	if (!doCmdCommand(x) || !doCmdCommand(y))
+	{
+		config_did_work = false;
+		createWindowsError("CONFIG DIDNT WORK");
+		CheckMariaDB();
+	}
+	config_did_work = true;
 }
 
 int  _tmain(int argc, _TCHAR* argv[])
 {
 	//to hide console
-	//FreeConsole();
+	/*FreeConsole();*/
 
 	//to hide console include a quick flicker at the start
-	//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+	::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
 	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
 
-	const std::string cwd = std::filesystem::current_path().string();
+	//const std::string cwd = std::filesystem::current_path().string();
 
 	killProcessByName(L"php.exe");
 	killProcessByName(L"Embedded Installer.exe");
 
+
+
+
 	CheckMariaDB();
-	std::cout << "got out of Maria\n";
-	std::cin.ignore();
+	//std::cout << "got out of Maria\n";
 
 
 	CheckXampp();
-	std::cout << "got out of Xampp\n";
+	//std::cout << "got out of Xampp\n";
 
 
-	std::cout << "Init Project\n";
+	//std::cout << "Init Project\n";
 	project_path = initProjectFiles();
-	std::cout << "got out of Init Project\n";
+	//std::cout << "got out of Init Project\n";
 
-	std::cout << "Configuring Database\n";
+	//std::cout << "Configuring Database\n";
 	ConfigureDatabase();
-	std::cout << "got out of configuring MariaDB\n";
+	//std::cout << "got out of configuring MariaDB\n";
 
 
 	StartSoftware();
 	//std::cout << "got out of software\n";
-
 
 
 	std::cin.ignore();

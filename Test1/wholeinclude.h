@@ -19,3 +19,11 @@
 #include <shlobj_core.h>
 #include <atlstr.h>
 
+
+
+//custom lib from https://stackoverflow.com/questions/4201399/prompting-a-user-with-an-input-box-c
+//#include "inputbox.h" SG_InputBoxLib.h
+#include "inputbox/TestInputBox/SG_InputBoxLib.h"
+//#include "inputbox/TestInputBox/pch.h"
+
+

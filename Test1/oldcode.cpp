@@ -295,7 +295,8 @@ VOID __stdcall StartServiceIfPossible(std::string servicename)
 //			}
 //			else
 //			{
-//				createWindowsMessage("OK lets try this again then.");
+//				
+// ("OK lets try this again then.");
 //				CheckMariaDB();
 //			}
 //		}
