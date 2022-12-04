@@ -158,10 +158,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="helper_function.cpp" />
     <ClCompile Include="inputbox\InputBox\SG_InputBox.cpp" />
     <ClCompile Include="inputbox\InputBox\stdafx.cpp" />
     <ClCompile Include="inputbox\InputBox\utils.cpp" />
     <ClCompile Include="inputbox\TestInputBox\pch.cpp" />
+    <ClCompile Include="installer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="oldcode.cpp" />
   </ItemGroup>
@@ -174,6 +176,7 @@
     <ClInclude Include="inputbox\InputBox\utils.h" />
     <ClInclude Include="inputbox\TestInputBox\pch.h" />
     <ClInclude Include="inputbox\TestInputBox\SG_InputBoxLib.h" />
+    <ClInclude Include="installer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="wholeinclude.h" />
   </ItemGroup>
