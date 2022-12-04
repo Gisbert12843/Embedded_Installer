@@ -10,7 +10,7 @@
 //	return wc;
 //}
 
-
+bool fix_connectionphp(std::string projectpath, std::string username, std::string password, std::string port);
 
 
 bool doCmdCommand(std::string thepath, std::string running_exe = "");

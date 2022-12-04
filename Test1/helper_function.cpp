@@ -34,7 +34,7 @@ bool doCmdCommand(std::string thepath, std::string running_exe)
 
 		if (CreateProcess(theexe_final, thepath_final, NULL, NULL, FALSE, 0, NULL, NULL, &strtinfo, &processInfo))
 		{
-			//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+			::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 			while (WaitForSingleObject(processInfo.hProcess, INFINITE))
 			{
 				std::cout << ".";
@@ -42,10 +42,10 @@ bool doCmdCommand(std::string thepath, std::string running_exe)
 			}
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
-
+			return true;
 		}
 		else
-			return 0;
+			return false;
 	}
 }
 
@@ -71,7 +71,7 @@ bool doCmdCommandInNewWindow(std::string command, std::string running_exe)
 		//CREATE_NO_WINDOW |
 		if (CreateProcess(theexe_final, thepath_final, NULL, NULL, FALSE, NORMAL_PRIORITY_CLASS | CREATE_NEW_CONSOLE | CREATE_NEW_PROCESS_GROUP, NULL, NULL, &strtinfo, &processInfo))
 		{
-			//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+			::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 			while (WaitForSingleObject(processInfo.hProcess, INFINITE)) //we maybe do not want to wait here since we detached the process.. needs some experiments
 			{
 				std::cout << ".";
@@ -80,10 +80,10 @@ bool doCmdCommandInNewWindow(std::string command, std::string running_exe)
 
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
-
+			return true;
 		}
 		else
-			return 0;
+			return false;
 	}
 }
 
@@ -204,7 +204,7 @@ int createWindowsError(std::string thestring)
 {
 	std::wstring message(thestring.begin(), thestring.end());
 
-	return MessageBoxW(NULL, message.c_str(), L"ERROR", MB_RETRYCANCEL | MB_ICONERROR);
+	return MessageBoxW(NULL, message.c_str(), L"ERROR", MB_ICONERROR);
 }
 
 void killProgrammMessage()
@@ -233,7 +233,34 @@ void stopSQLService(std::string servicename)
 	system(x);
 }
 
+bool fix_connectionphp(std::string projectpath, std::string username, std::string password, std::string port)
+{
+	std::vector<std::string> vec_connnection_php =
+	{
+		"<?php",
+		"$link = mysqli_connect(",
+		"\"localhost\"\,",
+		"\"" + username +"\"\,",
+		"\"" + password + "\"\,",
+		"\"MehrMarktDatabase\"\,",
+		"\"" + port + "\"",
+		");",
+		"if (!$link) {",
+		"echo \"Verbindung fehlgeschlagen : \"\, mysqli_connect_error();",
+		"exit();",
+		"}",
+		"$link-> set_charset(\"utf8\");"
+	};
+	std::ofstream output_connectionfile;
+	output_connectionfile.open(projectpath + "\\connection.php", std::ofstream::out | std::ofstream::trunc);
 
+	for (int i = 0; i < vec_connnection_php.size(); i++)
+	{
+		output_connectionfile << vec_connnection_php[i] << std::endl;
+	}
+	output_connectionfile.close();
+
+}
 
 std::string initProjectFiles()
 {	//powershell.exe Expand-Archive .\project.zip -DestinationPath .\
@@ -282,6 +309,8 @@ std::string initProjectFiles()
 	system(my_documents_s.c_str());
 	Sleep(6000);
 	DeleteFileA("project.zip");
+
+
 	return std::string(my_documents) + "\\SWE-Software";
 }
 
@@ -358,6 +387,10 @@ void loadCredentials(std::string projectpath, std::string& username, std::string
 		username = vecOfStr.at(0);
 		password = vecOfStr.at(1);
 		port = vecOfStr.at(2);
+
+		std::cout << username << "\n";
+		std::cout << password << "\n";
+		std::cout << port << "\n";
 
 		credential_file.close();
 		didloadcredentials = true;

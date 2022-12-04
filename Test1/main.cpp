@@ -6,6 +6,7 @@
 #include "helper_functions.h"
 #include "installer.h"
 
+
 #pragma comment(lib, "Shlwapi.lib")
 #pragma comment(lib, "advapi32.lib")
 
@@ -20,7 +21,7 @@ bool choose_new_install = false;
 bool didloadcredentials = false;
 
 
-void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string())
+bool CheckMariaDB(const std::string cwd = std::filesystem::current_path().string())
 {
 	{	//CHECK INSTALLTION STATUS OF MARIADB
 		//If Install target file "mariadb.exe" isnt found, the silent install with options will then be started
@@ -38,15 +39,16 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 			else
 			{
 				createWindowsError("Programm exited by the user.");
-				exit;
+				std::exit(69);
+				std::abort();
 			}
 		}
 		else //When MariaDB is found installed on the machine already
 		{
 			//std::cout << "MariaDB is already installed.\n";
-			if (config_did_work == false) //when config didn't work.
+			if (!std::filesystem::exists(project_path + "\\credentials_do_not_delete.txt")) //when config file doesn't exist
 			{
-				if (6 != createWindowsChoice("We found a version of MariaDB installed, but our base credentials arent working :( Please enter the Credentials (Username, Password, Port) for this instance?"))
+				if (6 == createWindowsChoice("We found a version of MariaDB installed, but our configuration isnt there :( Please enter the Credentials (Username, Password, Port) for your MariaDB?"))
 				{
 					do {
 						username = "";
@@ -55,18 +57,19 @@ void CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 						wString_username = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"We found an existing version of MariaDB. In order to use this Software we require the Username, the Password and the Port of your DB. Please enter your MariaDB Username.", L"root");
 						username = std::string(wString_username.begin(), wString_username.end());
 						std::wstring wString_password;
-						wString_password = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Password.", L"root");
+						wString_password = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Password.", L"");
 						user_password = std::string(wString_password.begin(), wString_password.end());
 						std::wstring wString_port;
-						wString_port = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Port.", L"root");
+						wString_port = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Port.", L"3306");
 						port = std::string(wString_port.begin(), wString_port.end());
-					} while (username == "" && user_password == "" || 6 != createWindowsChoice("Username:" + username + "\nPassword:" + user_password + "\nPort:" + port + "\nIs that correct?"));
+					} while (username == "" && user_password == "" || 6 != createWindowsChoice("Username:" + username + "\nPassword:" + user_password + "\nPort:" + port + "\nIs that correct? This can only be changed by deleting \"credentials_do_not_delete.txt\" inside user/document/swe_project!!"));
 					loadCredentials(project_path, username, user_password, port, didloadcredentials);
 				}
 				else
 				{
 					createWindowsError("Programm requires the credentials of the existing MariaDB. Exiting now.");
-					exit;
+					std::exit(69);
+					std::abort();
 				}
 			}
 		}
@@ -140,7 +143,7 @@ void StartSoftware(const std::string cwd = std::filesystem::current_path().strin
 	}
 }
 
-void ConfigureDatabase()
+bool ConfigureDatabase()
 {
 	startSQLService(servicename);
 	
@@ -168,55 +171,58 @@ void ConfigureDatabase()
 	{
 		config_did_work = false;
 		createWindowsError("CONFIG DIDNT WORK");
-		CheckMariaDB();
+		return false;
 	}
 	config_did_work = true;
+	return true;
 }
 
-int  _tmain(int argc, _TCHAR* argv[])
+
+int _tmain(int argc, _TCHAR* argv[])
 {
-	//to hide console
-	/*FreeConsole();*/
+	bool restart = false;
+	do {
+		//to hide console
+		/*FreeConsole();*/
 
-	//to hide console include a quick flicker at the start
-	//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+		//to hide console include a quick flicker at the start
+		::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
-	CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-
-
-	//const std::string cwd = std::filesystem::current_path().string();
-
-	killProcessByName(L"php.exe");
-	killProcessByName(L"Embedded Installer.exe");
+		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
 
-	//std::cout << "Init Project\n";
-	project_path = initProjectFiles();
-	//std::cout << "got out of Init Project\n";
+		//const std::string cwd = std::filesystem::current_path().string();
+
+		killProcessByName(L"php.exe");
+		killProcessByName(L"Embedded Installer.exe");
 
 
-	CheckMariaDB();
-	loadCredentials(project_path, username, user_password, port, didloadcredentials);
-	//std::cout << "got out of Maria\n";
+		//std::cout << "Init Project\n";
+		project_path = initProjectFiles();
+		//std::cout << "got out of Init Project\n";
 
 
-	CheckXampp();
-	//std::cout << "got out of Xampp\n";
+		CheckMariaDB();
+		loadCredentials(project_path, username, user_password, port, didloadcredentials);
+		//std::cout << "got out of Maria\n";
+
+
+		CheckXampp();
+		//std::cout << "got out of Xampp\n";
 
 
 
+		fix_connectionphp(project_path, username, user_password, port);
+		//std::cout << "Configuring Database\n";
+		ConfigureDatabase();
+		//std::cout << "got out of configuring MariaDB\n";
 
-	//std::cout << "Configuring Database\n";
-	ConfigureDatabase();
-	//std::cout << "got out of configuring MariaDB\n";
 
+		
+		//std::cout << "got out of software\n";
 
+	} while (restart == true);
 	StartSoftware();
-	//std::cout << "got out of software\n";
-
-
-	std::cin.ignore();
-
 	return 0;
 }
 
