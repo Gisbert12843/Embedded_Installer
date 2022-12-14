@@ -9,6 +9,8 @@
 //
 //	return wc;
 //}
+void setCredentials(std::string projectpath, std::string& username, std::string& password, std::string& port, bool& didloadcredentials);
+
 
 bool fix_connectionphp(std::string projectpath, std::string username, std::string password, std::string port);
 

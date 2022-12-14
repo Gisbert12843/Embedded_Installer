@@ -361,7 +361,15 @@ std::string findMaria()
 	return "";
 }
 
+void setCredentials(std::string projectpath, std::string& username, std::string& password, std::string& port, bool& didloadcredentials)
+{
+	std::ofstream outputfile;
+	outputfile.open(projectpath + "\\credentials_do_not_delete.txt", std::ofstream::out | std::ofstream::trunc);
 
+	outputfile << username << std::endl << password << std::endl << port;
+	outputfile.close();
+	didloadcredentials = false;
+}
 void loadCredentials(std::string projectpath, std::string& username, std::string& password, std::string& port, bool& didloadcredentials)
 {
 	if (std::filesystem::exists(projectpath + "\\credentials_do_not_delete.txt"))

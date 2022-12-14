@@ -27,7 +27,6 @@ bool CheckMariaDB(const std::string cwd = std::filesystem::current_path().string
 		//If Install target file "mariadb.exe" isnt found, the silent install with options will then be started
 		//At the end the mariadb installer will be deleted
 
-		mariaspath = findMaria();
 		//createWindowsMessage("got out of find maria");
 		if (mariaspath == "")
 		{
@@ -183,10 +182,10 @@ int _tmain(int argc, _TCHAR* argv[])
 	bool restart = false;
 	do {
 		//to hide console
-		/*FreeConsole();*/
+		//FreeConsole();
 
 		//to hide console include a quick flicker at the start
-		::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+		//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
@@ -194,12 +193,46 @@ int _tmain(int argc, _TCHAR* argv[])
 		//const std::string cwd = std::filesystem::current_path().string();
 
 		killProcessByName(L"php.exe");
-		killProcessByName(L"Embedded Installer.exe");
+		//killProcessByName(L"SWE_B1_Launcher.exe");
+		killProcessByName(L"msiexec.exe");
 
 
 		//std::cout << "Init Project\n";
 		project_path = initProjectFiles();
 		//std::cout << "got out of Init Project\n";
+
+		mariaspath = findMaria();
+
+		if (mariaspath != "")
+		{
+			//This enables the user to reset the db credentials at startup or just start the software normally
+			switch (MessageBoxW(NULL, L"Press 'Yes' to start the software normally. Press 'No' to reset the used MariaDB Password. Press 'Cancel' to .. Cancel...", L"!!HINWEIS!!", MB_YESNOCANCEL | MB_DEFBUTTON1 | MB_TOPMOST))
+			{
+			case IDCANCEL: abort();
+			case IDYES: break;
+			case IDNO:
+			{
+				do {
+					username = "";
+					user_password = "";
+					std::wstring wString_username;
+					wString_username = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"We found an existing version of MariaDB. In order to use this Software we require the Username, the Password and the Port of your DB. Please enter your MariaDB Username.", L"root");
+					username = std::string(wString_username.begin(), wString_username.end());
+					std::wstring wString_password;
+					wString_password = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Password.", L"");
+					user_password = std::string(wString_password.begin(), wString_password.end());
+					std::wstring wString_port;
+					wString_port = SG_InputBox::GetString(L"Mehr Markt Anwendung by SWE B1", L"Please enter your MariaDB Port.", L"3306");
+					port = std::string(wString_port.begin(), wString_port.end());
+				} while (username == "" && user_password == "" || 6 != createWindowsChoice("Username:" + username + "\nPassword:" + user_password + "\nPort:" + port + "\nIs that correct? This can only be changed by deleting \"credentials_do_not_delete.txt\" inside user/document/swe_project!!"));
+				setCredentials(project_path, username, user_password, port, didloadcredentials);
+				break;
+			}
+
+			default:
+				continue;
+			}
+		}
 
 
 		CheckMariaDB();
@@ -225,7 +258,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	StartSoftware();
 	return 0;
 }
-
 
 
 
