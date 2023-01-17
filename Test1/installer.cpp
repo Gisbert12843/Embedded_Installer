@@ -38,9 +38,13 @@ void install_maria(std::string sourcepath, std::string &username, std::string &u
 			ZeroMemory(&strtinfo, sizeof(strtinfo));
 
 			//mysql -h localhost -u root -p toor
-
+			// 
+			// 
+			//msiexec /i mariadb_installer.msi SERVICENAME=MariaDB PORT=42069 PASSWORD=toor /qn
+			// 
+			// 
 			// INSTALLDIR=\%ProgramFiles\%\\MariaDB_MehrMarkt DEFAULTUSER=root PASSWORD=toor SERVICENAME=Mehr_Markt_Database-Service PORT=42069 UTF8 
-			std::string execute_order = "msiexec /i mariadb_installer.msi SERVICENAME=MariaDB PORT=" + port + " PASSWORD=" + user_password + " /qn";
+			std::string execute_order = "msiexec /i mariadb_installer.msi SERVICENAME=MariaDB PORT=" + port + " PASSWORD=" + user_password + " UTF8=1 /qn";
 			std::wstring execute_order_ws;
 			execute_order_ws.assign(execute_order.begin(), execute_order.end());
 			LPWSTR pwst = &execute_order_ws[0];

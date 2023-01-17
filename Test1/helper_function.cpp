@@ -11,7 +11,7 @@
 //}
 
 #include "resource.h"
-
+#include "installer.h"
 
 
 bool doCmdCommand(std::string thepath, std::string running_exe)
@@ -414,4 +414,34 @@ void loadCredentials(std::string projectpath, std::string& username, std::string
 		didloadcredentials = false;
 
 	}
+}
+
+bool fix_phpini(const std::string cwd = std::filesystem::current_path().string())
+{
+	if (!std::filesystem::exists(std::filesystem::path("C:\\xampp\\php\\php.ini")))
+	{
+		install_xampp(cwd);
+	}
+
+	std::ifstream credential_file;
+	credential_file.open(std::filesystem::path("C:\\xampp\\php\\php.ini").string());
+
+	if (!credential_file || !credential_file.is_open() || !credential_file.good())
+	{
+		createWindowsError("Couldnt alter php.ini! The project may not be working as intended. Please provide sufficient priviliges to the following path: C:\\xampp\\php. Programm will continue.");
+		return false;
+	}	
+
+	std::string checkedString;
+	std::vector<std::string> vecOfStr;
+
+	while (std::getline(credential_file, checkedString)) // Every line of the inputfile gets its own string in the vector
+	{
+		vecOfStr.push_back(checkedString);
+	}
+	
+	return true;
+
+	//NOT DONE
+
 }

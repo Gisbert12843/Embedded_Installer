@@ -167,6 +167,7 @@ bool ConfigureDatabase()
 	//std::cout << "\n\n" << y << "\n\n";
 
 	if (!doCmdCommand(x) || !doCmdCommand(y))
+	//if (!doCmdCommand(x))
 	{
 		config_did_work = false;
 		createWindowsError("CONFIG DIDNT WORK");
@@ -185,7 +186,7 @@ int _tmain(int argc, _TCHAR* argv[])
 		//FreeConsole();
 
 		//to hide console include a quick flicker at the start
-		//::ShowWindow(::GetConsoleWindow(), SW_HIDE);
+		::ShowWindow(::GetConsoleWindow(), SW_HIDE);
 
 		CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
